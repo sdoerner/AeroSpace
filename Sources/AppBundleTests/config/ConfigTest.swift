@@ -298,6 +298,7 @@ final class ConfigTest: XCTestCase {
             outer.bottom = 13
             outer.top = [{ monitor."built-in" = 3 }, { monitor."secondary" = 4 }, 6]
             outer.right = [{ monitor.2 = 7 }, 8]
+            outer.maxWidth = 400
             """
         )
         assertEquals(errors1, [])
@@ -321,7 +322,8 @@ final class ConfigTest: XCTestCase {
                         ],
                         default: 6
                     ),
-                    right: .perMonitor([PerMonitorValue(description: .sequenceNumber(2), value: 7)], default: 8)
+                    right: .perMonitor([PerMonitorValue(description: .sequenceNumber(2), value: 7)], default: 8),
+                    maxWidth: .constant(400)
                 )
             )
         )

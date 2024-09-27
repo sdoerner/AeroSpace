@@ -27,21 +27,24 @@ struct Gaps: Copyable, Equatable {
         var bottom: DynamicConfigValue<Int>
         var top: DynamicConfigValue<Int>
         var right: DynamicConfigValue<Int>
+        var maxWidth: DynamicConfigValue<Int>
 
-        static var zero = Outer(left: 0, bottom: 0, top: 0, right: 0)
+        static var zero = Outer(left: 0, bottom: 0, top: 0, right: 0, maxWidth: Int.max)
 
-        init(left: Int, bottom: Int, top: Int, right: Int) {
+        init(left: Int, bottom: Int, top: Int, right: Int, maxWidth: Int) {
             self.left = .constant(left)
             self.bottom = .constant(bottom)
             self.top = .constant(top)
             self.right = .constant(right)
+            self.maxWidth = .constant(maxWidth)
         }
 
-        init(left: DynamicConfigValue<Int>, bottom: DynamicConfigValue<Int>, top: DynamicConfigValue<Int>, right: DynamicConfigValue<Int>) {
+        init(left: DynamicConfigValue<Int>, bottom: DynamicConfigValue<Int>, top: DynamicConfigValue<Int>, right: DynamicConfigValue<Int>, maxWidth: DynamicConfigValue<Int>) {
             self.left = left
             self.bottom = bottom
             self.top = top
             self.right = right
+            self.maxWidth = maxWidth
         }
     }
 
@@ -68,18 +71,32 @@ struct ResolvedGaps {
         let right: Int
     }
 
-    init(gaps: Gaps, monitor: any Monitor) {
+    init(gaps: Gaps, monitor: any Monitor, useSingleWindowGaps: Bool) {
         inner = .init(
             vertical: gaps.inner.vertical.getValue(for: monitor),
             horizontal: gaps.inner.horizontal.getValue(for: monitor)
         )
 
+        var leftGap =  gaps.outer.left.getValue(for: monitor)
+        var rightGap =  gaps.outer.right.getValue(for: monitor)
+
+        if useSingleWindowGaps {
+            let actualWidth = Int(monitor.width) - leftGap - rightGap
+            let maxWidth = gaps.outer.maxWidth.getValue(for: monitor)
+            if (actualWidth > maxWidth) {
+              let diff = actualWidth - maxWidth
+              let leftDiff = diff / 2
+              let rightDiff = diff - leftDiff
+              leftGap += leftDiff
+              rightGap += rightDiff
+            }
+        }
         outer = .init(
-            left: gaps.outer.left.getValue(for: monitor),
-            bottom: gaps.outer.bottom.getValue(for: monitor),
-            top: gaps.outer.top.getValue(for: monitor),
-            right: gaps.outer.right.getValue(for: monitor)
-        )
+                    left: leftGap,
+                    bottom: gaps.outer.bottom.getValue(for: monitor),
+                    top: gaps.outer.top.getValue(for: monitor),
+                    right: rightGap
+                )
     }
 }
 
@@ -98,6 +115,7 @@ private let outerParser: [String: any ParserProtocol<Gaps.Outer>] = [
     "bottom": Parser(\.bottom) { value, backtrace, errors in parseDynamicValue(value, Int.self, 0, backtrace, &errors) },
     "top": Parser(\.top) { value, backtrace, errors in parseDynamicValue(value, Int.self, 0, backtrace, &errors) },
     "right": Parser(\.right) { value, backtrace, errors in parseDynamicValue(value, Int.self, 0, backtrace, &errors) },
+    "maxWidth": Parser(\.maxWidth) { value, backtrace, errors in parseDynamicValue(value, Int.self, 0, backtrace, &errors) },
 ]
 
 func parseGaps(_ raw: TOMLValueConvertible, _ backtrace: TomlBacktrace, _ errors: inout [TomlParseError]) -> Gaps {

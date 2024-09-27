@@ -37,10 +37,29 @@ class Workspace: TreeNode, NonLeafTreeNodeObject, Hashable, Identifiable, Custom
     /// `assignedMonitorPoint` must be interpreted only when the workspace is invisible
     fileprivate var assignedMonitorPoint: CGPoint? = nil
 
+    func visibleRectPaddedByOuterGaps(allowSingleWindowGaps: Bool = true) -> Rect {
+        let visibleRect = workspaceMonitor.visibleRect
+        let topLeft = visibleRect.topLeftCorner
+        let useSingleWindowGaps = allowSingleWindowGaps && atMostOneNonFloatingWindow()
+        let gaps = ResolvedGaps(
+            gaps: config.gaps, monitor: workspaceMonitor, useSingleWindowGaps: useSingleWindowGaps)
+        return Rect(
+            topLeftX: topLeft.x + gaps.outer.left.toDouble(),
+            topLeftY: topLeft.y + gaps.outer.top.toDouble(),
+            width: visibleRect.width - gaps.outer.left.toDouble() - gaps.outer.right.toDouble(),
+            height: visibleRect.height - gaps.outer.top.toDouble() - gaps.outer.bottom.toDouble()
+        )
+    }
+
     private init(_ name: String) {
         self.name = name
         self.nameLogicalSegments = name.toLogicalSegments()
         super.init(parent: NilTreeNode.instance, adaptiveWeight: 0, index: 0)
+    }
+
+    func atMostOneNonFloatingWindow() -> Bool {
+        let nonFloatingWindows = self.allLeafWindowsRecursive.filter { !$0.isFloating }
+        return nonFloatingWindows.count <= 1
     }
 
     static var all: [Workspace] {
@@ -60,7 +79,7 @@ class Workspace: TreeNode, NonLeafTreeNodeObject, Hashable, Identifiable, Custom
     static func < (lhs: Workspace, rhs: Workspace) -> Bool { lhs.nameLogicalSegments < rhs.nameLogicalSegments }
 
     override func getWeight(_ targetOrientation: Orientation) -> CGFloat {
-        workspaceMonitor.visibleRectPaddedByOuterGaps.getDimension(targetOrientation)
+        visibleRectPaddedByOuterGaps().getDimension(targetOrientation)
     }
 
     override func setWeight(_ targetOrientation: Orientation, _ newValue: CGFloat) {
