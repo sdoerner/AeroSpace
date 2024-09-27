@@ -15,13 +15,12 @@ EOF
 nuke-path() {
     /bin/rm -rf .deps/bin
     /bin/mkdir -p .deps/bin
-
-    add-to-bin bash not-outdated-bash # build-shell-completion.sh
+    #add-to-bin bash not-outdated-bash # build-shell-completion.sh
     add-to-bin brew # install-from-sources.sh
-    add-to-bin bundle # Ruby, asciidoc
-    add-to-bin bundler # Ruby, asciidoc
+    #add-to-bin bundle # Ruby, asciidoc
+    #add-to-bin bundler # Ruby, asciidoc
     add-to-bin cargo
-    add-to-bin fish
+    # add-to-bin fish
     add-to-bin git
     add-to-bin rustc
     add-to-bin xcbeautify
