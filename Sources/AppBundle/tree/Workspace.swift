@@ -38,10 +38,30 @@ class Workspace: TreeNode, NonLeafTreeNodeObject, Hashable, Comparable {
     fileprivate var assignedMonitorPoint: CGPoint? = nil
 
     @MainActor
+    func visibleRectPaddedByOuterGaps(allowSingleWindowGaps: Bool = true) -> Rect {
+        let visibleRect = workspaceMonitor.visibleRect
+        let topLeft = visibleRect.topLeftCorner
+        let useSingleWindowGaps = allowSingleWindowGaps && atMostOneNonFloatingWindow()
+        let gaps = ResolvedGaps(
+            gaps: config.gaps, monitor: workspaceMonitor, useSingleWindowGaps: useSingleWindowGaps)
+        return Rect(
+            topLeftX: topLeft.x + gaps.outer.left.toDouble(),
+            topLeftY: topLeft.y + gaps.outer.top.toDouble(),
+            width: visibleRect.width - gaps.outer.left.toDouble() - gaps.outer.right.toDouble(),
+            height: visibleRect.height - gaps.outer.top.toDouble() - gaps.outer.bottom.toDouble()
+        )
+    }
+
+    @MainActor
     private init(_ name: String) {
         self.name = name
         self.nameLogicalSegments = name.toLogicalSegments()
         super.init(parent: NilTreeNode.instance, adaptiveWeight: 0, index: 0)
+    }
+
+    @MainActor func atMostOneNonFloatingWindow() -> Bool {
+        let nonFloatingWindows = self.allLeafWindowsRecursive.filter { !$0.isFloating }
+        return nonFloatingWindows.count <= 1
     }
 
     @MainActor static var all: [Workspace] {
@@ -63,7 +83,7 @@ class Workspace: TreeNode, NonLeafTreeNodeObject, Hashable, Comparable {
     }
 
     override func getWeight(_ targetOrientation: Orientation) -> CGFloat {
-        workspaceMonitor.visibleRectPaddedByOuterGaps.getDimension(targetOrientation)
+        visibleRectPaddedByOuterGaps().getDimension(targetOrientation)
     }
 
     override func setWeight(_ targetOrientation: Orientation, _ newValue: CGFloat) {
